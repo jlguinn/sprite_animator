@@ -187,33 +187,35 @@
       <button id="nextFrameBtn" disabled>>|</button>
     </div>
     <div class="canvas-wrapper">
-      <div class="frame-position" id="framePosition">-</div>
-      <div class="canvas-container">
-        <canvas id="previewCanvas"></canvas>
-        <div class="controls-container">
-          <div>
-            <div class="control-label">Frame Adjustment</div>
-            <div class="movement-controls">
-              <button class="movement-btn up" id="moveUpBtn" disabled>↑</button>
-              <button class="movement-btn left" id="moveLeftBtn" disabled>←</button>
-              <button class="movement-btn reset" id="resetBtn" disabled>Reset</button>
-              <button class="movement-btn right" id="moveRightBtn" disabled>→</button>
-              <button class="movement-btn down" id="moveDownBtn" disabled>↓</button>
-            </div>
+        <div class="canvas-container">
+          <div class="frame-wrapper">
+            <canvas id="previewCanvas"></canvas>
+            <div class="frame-position" id="framePosition">-</div>
           </div>
-          <div>
-            <div class="control-label">Global Adjustment</div>
-            <div class="global-controls">
-              <button class="movement-btn up" id="globalMoveUpBtn" disabled>↑</button>
-              <button class="movement-btn left" id="globalMoveLeftBtn" disabled>←</button>
-              <button class="movement-btn reset" id="globalResetBtn" disabled>Reset</button>
-              <button class="movement-btn right" id="globalMoveRightBtn" disabled>→</button>
-              <button class="movement-btn down" id="globalMoveDownBtn" disabled>↓</button>
+          <div class="controls-container">
+            <div>
+              <div class="control-label">Frame Adjustment</div>
+              <div class="movement-controls">
+                <button class="movement-btn up" id="moveUpBtn" disabled>↑</button>
+                <button class="movement-btn left" id="moveLeftBtn" disabled>←</button>
+                <button class="movement-btn reset" id="resetBtn" disabled>Reset</button>
+                <button class="movement-btn right" id="moveRightBtn" disabled>→</button>
+                <button class="movement-btn down" id="moveDownBtn" disabled>↓</button>
+              </div>
+            </div>
+            <div>
+              <div class="control-label">Global Adjustment</div>
+              <div class="global-controls">
+                <button class="movement-btn up" id="globalMoveUpBtn" disabled>↑</button>
+                <button class="movement-btn left" id="globalMoveLeftBtn" disabled>←</button>
+                <button class="movement-btn reset" id="globalResetBtn" disabled>Reset</button>
+                <button class="movement-btn right" id="globalMoveRightBtn" disabled>→</button>
+                <button class="movement-btn down" id="globalMoveDownBtn" disabled>↓</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     <div>
       <h3>Frame Specifications</h3>
       <div class="json-controls">
