@@ -66,6 +66,11 @@
       background-color: #bdc3c7;
       cursor: not-allowed;
     }
+    .canvas-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
     .canvas-container {
       display: flex;
       align-items: flex-start;
@@ -80,7 +85,8 @@
     .controls-container {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 10px;
+      align-items: center;
     }
     .movement-controls,
     .global-controls {
@@ -89,13 +95,13 @@
         ". up ."
         "left reset right"
         ". down .";
-      gap: 5px;
+      gap: 3px;
     }
     .movement-btn {
-      padding: 5px;
-      font-size: 12px;
-      width: 30px;
-      height: 30px;
+      padding: 3px;
+      font-size: 10px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -129,10 +135,9 @@
       margin-bottom: 5px;
     }
     .frame-position {
-      text-align: center;
       font-size: 14px;
       color: #34495e;
-      margin-bottom: 15px;
+      margin-bottom: 5px;
     }
     pre {
       background-color: #f8f9fa;
@@ -166,7 +171,7 @@
     </div>
     <div class="input-group">
       <label>Speed (FPS):</label>
-      <input type="number" id="speedInput" value="60" min="1" max="120">
+      <input type="number" id="speedInput" value="8" min="1" max="120">
     </div>
     <div class="input-group">
       <label>Overlay Previous Frame:</label>
@@ -177,36 +182,38 @@
       <input type="file" id="jsonInput" accept="application/json">
     </div>
     <div class="input-group">
-      <button id="pauseResumeBtn" disabled>Pause</button>
-      <button id="prevFrameBtn" disabled>Previous Frame</button>
-      <button id="nextFrameBtn" disabled>Next Frame</button>
+      <button id="prevFrameBtn" disabled>|<</button>
+      <button id="pauseResumeBtn" disabled>||</button>
+      <button id="nextFrameBtn" disabled>>|</button>
     </div>
-    <div class="canvas-container">
-      <canvas id="previewCanvas"></canvas>
-      <div class="controls-container">
-        <div>
-          <div class="control-label">Frame Adjustment</div>
-          <div class="movement-controls">
-            <button class="movement-btn up" id="moveUpBtn" disabled>↑</button>
-            <button class="movement-btn left" id="moveLeftBtn" disabled>←</button>
-            <button class="movement-btn reset" id="resetBtn" disabled>Reset</button>
-            <button class="movement-btn right" id="moveRightBtn" disabled>→</button>
-            <button class="movement-btn down" id="moveDownBtn" disabled>↓</button>
+    <div class="canvas-wrapper">
+      <div class="frame-position" id="framePosition">-</div>
+      <div class="canvas-container">
+        <canvas id="previewCanvas"></canvas>
+        <div class="controls-container">
+          <div>
+            <div class="control-label">Frame Adjustment</div>
+            <div class="movement-controls">
+              <button class="movement-btn up" id="moveUpBtn" disabled>↑</button>
+              <button class="movement-btn left" id="moveLeftBtn" disabled>←</button>
+              <button class="movement-btn reset" id="resetBtn" disabled>Reset</button>
+              <button class="movement-btn right" id="moveRightBtn" disabled>→</button>
+              <button class="movement-btn down" id="moveDownBtn" disabled>↓</button>
+            </div>
           </div>
-        </div>
-        <div>
-          <div class="control-label">Global Adjustment</div>
-          <div class="global-controls">
-            <button class="movement-btn up" id="globalMoveUpBtn" disabled>↑</button>
-            <button class="movement-btn left" id="globalMoveLeftBtn" disabled>←</button>
-            <button class="movement-btn reset" id="globalResetBtn" disabled>Reset</button>
-            <button class="movement-btn right" id="globalMoveRightBtn" disabled>→</button>
-            <button class="movement-btn down" id="globalMoveDownBtn" disabled>↓</button>
+          <div>
+            <div class="control-label">Global Adjustment</div>
+            <div class="global-controls">
+              <button class="movement-btn up" id="globalMoveUpBtn" disabled>↑</button>
+              <button class="movement-btn left" id="globalMoveLeftBtn" disabled>←</button>
+              <button class="movement-btn reset" id="globalResetBtn" disabled>Reset</button>
+              <button class="movement-btn right" id="globalMoveRightBtn" disabled>→</button>
+              <button class="movement-btn down" id="globalMoveDownBtn" disabled>↓</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="frame-position" id="framePosition">Row: -, Col: -</div>
     <div>
       <h3>Frame Specifications</h3>
       <div class="json-controls">
@@ -412,7 +419,7 @@
     // Draw current frame with per-frame and global position adjustments
     function drawFrame() {
       if (frames.length === 0) {
-        framePosition.textContent = "Row: -, Col: -";
+        framePosition.textContent = "-";
         return;
       }
 
@@ -450,7 +457,7 @@
       const cols = parseInt(colsInput.value) || 5;
       const row = Math.floor(currentFrame / cols) + 1;
       const col = (currentFrame % cols) + 1;
-      framePosition.textContent = `Row: ${row}, Col: ${col}`;
+      framePosition.textContent = `${row}:${col}`;
     }
 
     // Animation loop
@@ -487,7 +494,10 @@
     // Pause/Resume handler
     pauseResumeBtn.addEventListener('click', () => {
       isPaused = !isPaused;
-      pauseResumeBtn.textContent = isPaused ? 'Resume' : 'Pause';
+      pauseResumeBtn.textContent = isPaused ? '>' : '||';
+      if (!isPaused) {
+        lastFrameTime = performance.now(); // Reset timing on resume
+      }
     });
 
     // Previous frame handler
