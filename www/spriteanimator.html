@@ -77,10 +77,21 @@
       gap: 15px;
       margin: 15px 0;
     }
+    .frame-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+    }
     canvas {
       border: 2px solid #34495e;
       border-radius: 4px;
       background-color: #ecf0f1;
+    }
+    .controls-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
     }
     .controls-container {
       display: flex;
@@ -137,23 +148,34 @@
     .frame-position {
       font-size: 14px;
       color: #34495e;
-      margin-bottom: 5px;
     }
-    pre {
+    .json-output {
+      max-height: 200px;
+      width: 300px;
+      overflow-y: auto;
       background-color: #f8f9fa;
-      padding: 15px;
+      padding: 10px;
       border: 1px solid #dcdcdc;
       border-radius: 4px;
-      max-height: 300px;
-      overflow-y: auto;
       font-family: 'Courier New', monospace;
       font-size: 14px;
       color: #2c3e50;
+      cursor: pointer;
     }
-    .json-controls {
+    .json-input-group {
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      margin-bottom: 10px;
+    }
+    textarea#jsonInput {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      border: 1px solid #dcdcdc;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: vertical;
     }
   </style>
 </head>
@@ -171,15 +193,11 @@
     </div>
     <div class="input-group">
       <label>Speed (FPS):</label>
-      <input type="number" id="speedInput" value="8" min="1" max="120">
+      <input type="number" id="speedInput" value="60" min="1" max="120">
     </div>
     <div class="input-group">
       <label>Overlay Previous Frame:</label>
       <input type="checkbox" id="overlayToggle">
-    </div>
-    <div class="input-group">
-      <label>Load JSON Config:</label>
-      <input type="file" id="jsonInput" accept="application/json">
     </div>
     <div class="input-group">
       <button id="prevFrameBtn" disabled>|<</button>
@@ -187,11 +205,12 @@
       <button id="nextFrameBtn" disabled>>|</button>
     </div>
     <div class="canvas-wrapper">
-        <div class="canvas-container">
-          <div class="frame-wrapper">
-            <canvas id="previewCanvas"></canvas>
-            <div class="frame-position" id="framePosition">-</div>
-          </div>
+      <div class="canvas-container">
+        <div class="frame-wrapper">
+          <canvas id="previewCanvas"></canvas>
+          <div class="frame-position" id="framePosition">-</div>
+        </div>
+        <div class="controls-wrapper">
           <div class="controls-container">
             <div>
               <div class="control-label">Frame Adjustment</div>
@@ -214,14 +233,16 @@
               </div>
             </div>
           </div>
+          <pre id="frameSpecs" class="json-output" onclick="this.focus(); const range = document.createRange(); range.selectNodeContents(this); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);">-</pre>
         </div>
       </div>
-    <div>
-      <h3>Frame Specifications</h3>
-      <div class="json-controls">
-        <button id="copyJsonBtn" disabled>Copy JSON</button>
+      <div>
+        <h3>JSON Configuration</h3>
+        <div class="json-input-group">
+          <textarea id="jsonInput" placeholder="Paste JSON configuration here..."></textarea>
+          <button id="applyJsonBtn" disabled>Apply</button>
+        </div>
       </div>
-      <pre id="frameSpecs"></pre>
     </div>
   </div>
 
@@ -231,6 +252,7 @@
     const colsInput = document.getElementById('colsInput');
     const speedInput = document.getElementById('speedInput');
     const jsonInput = document.getElementById('jsonInput');
+    const applyJsonBtn = document.getElementById('applyJsonBtn');
     const overlayToggle = document.getElementById('overlayToggle');
     const pauseResumeBtn = document.getElementById('pauseResumeBtn');
     const prevFrameBtn = document.getElementById('prevFrameBtn');
@@ -245,7 +267,6 @@
     const globalMoveLeftBtn = document.getElementById('globalMoveLeftBtn');
     const globalMoveRightBtn = document.getElementById('globalMoveRightBtn');
     const globalResetBtn = document.getElementById('globalResetBtn');
-    const copyJsonBtn = document.getElementById('copyJsonBtn');
     const canvas = document.getElementById('previewCanvas');
     const ctx = canvas.getContext('2d');
     const frameSpecsOutput = document.getElementById('frameSpecs');
@@ -285,85 +306,67 @@
           globalMoveLeftBtn.disabled = false;
           globalMoveRightBtn.disabled = false;
           globalResetBtn.disabled = false;
-          copyJsonBtn.disabled = false;
+          applyJsonBtn.disabled = false;
         };
         spriteImage.src = event.target.result;
       };
       reader.readAsDataURL(file);
     });
 
-    // Load JSON configuration
-    jsonInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file || !spriteImage) return;
+    // Load JSON configuration from text input
+    applyJsonBtn.addEventListener('click', () => {
+      if (!spriteImage) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const config = JSON.parse(event.target.result);
-          const rows = parseInt(rowsInput.value) || 5;
-          const cols = parseInt(colsInput.value) || 5;
-          const expectedFrameCount = rows * cols;
+      try {
+        const config = JSON.parse(jsonInput.value);
+        const rows = parseInt(rowsInput.value) || 5;
+        const cols = parseInt(colsInput.value) || 5;
+        const expectedFrameCount = rows * cols;
 
-          // Validate the loaded JSON
-          if (!config.frames || !Array.isArray(config.frames)) {
-            alert('Invalid JSON: "frames" must be an array.');
-            return;
-          }
-          if (config.frames.length !== expectedFrameCount) {
-            alert(`Invalid JSON: Expected ${expectedFrameCount} frames, but found ${config.frames.length}.`);
-            return;
-          }
-          if (typeof config.globalOffsetX !== 'number' || typeof config.globalOffsetY !== 'number') {
-            alert('Invalid JSON: "globalOffsetX" and "globalOffsetY" must be numbers.');
-            return;
-          }
-
-          // Validate frame structure and dimensions
-          const frameWidth = spriteImage.width / cols;
-          const frameHeight = spriteImage.height / rows;
-          for (let i = 0; i < config.frames.length; i++) {
-            const frame = config.frames[i];
-            if (typeof frame.x !== 'number' || typeof frame.y !== 'number' ||
-                typeof frame.width !== 'number' || typeof frame.height !== 'number' ||
-                typeof frame.offsetX !== 'number' || typeof frame.offsetY !== 'number') {
-              alert(`Invalid JSON: Frame ${i} is missing required properties or has invalid types.`);
-              return;
-            }
-            // Check if dimensions match the current sprite sheet
-            if (Math.abs(frame.width - frameWidth) > 0.1 || Math.abs(frame.height - frameHeight) > 0.1) {
-              alert(`Invalid JSON: Frame ${i} dimensions (${frame.width}x${frame.height}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
-              return;
-            }
-          }
-
-          // Apply the loaded configuration
-          frames = config.frames;
-          globalOffsetX = config.globalOffsetX;
-          globalOffsetY = config.globalOffsetY;
-
-          // Update display
-          frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
-          currentFrame = 0;
-          drawFrame();
-        } catch (error) {
-          alert('Error parsing JSON: ' + error.message);
+        // Validate the loaded JSON
+        if (!config.frames || !Array.isArray(config.frames)) {
+          alert('Invalid JSON: "frames" must be an array.');
+          return;
         }
-      };
-      reader.readAsText(file);
-    });
+        if (config.frames.length !== expectedFrameCount) {
+          alert(`Invalid JSON: Expected ${expectedFrameCount} frames, but found ${config.frames.length}.`);
+          return;
+        }
+        if (typeof config.globalOffsetX !== 'number' || typeof config.globalOffsetY !== 'number') {
+          alert('Invalid JSON: "globalOffsetX" and "globalOffsetY" must be numbers.');
+          return;
+        }
 
-    // Copy JSON to clipboard
-    copyJsonBtn.addEventListener('click', () => {
-      if (frames.length === 0) return;
+        // Validate frame structure and dimensions
+        const frameWidth = spriteImage.width / cols;
+        const frameHeight = spriteImage.height / rows;
+        for (let i = 0; i < config.frames.length; i++) {
+          const frame = config.frames[i];
+          if (typeof frame.x !== 'number' || typeof frame.y !== 'number' ||
+              typeof frame.width !== 'number' || typeof frame.height !== 'number' ||
+              typeof frame.offsetX !== 'number' || typeof frame.offsetY !== 'number') {
+            alert(`Invalid JSON: Frame ${i} is missing required properties or has invalid types.`);
+            return;
+          }
+          // Check if dimensions match the current sprite sheet
+          if (Math.abs(frame.width - frameWidth) > 0.1 || Math.abs(frame.height - frameHeight) > 0.1) {
+            alert(`Invalid JSON: Frame ${i} dimensions (${frame.width}x${frame.height}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
+            return;
+          }
+        }
 
-      const config = { frames, globalOffsetX, globalOffsetY };
-      const jsonString = JSON.stringify(config, null, 2);
-      navigator.clipboard.writeText(jsonString).then(() => {
-        alert('JSON copied to clipboard!');
-      }).catch((error) => {
-        alert('Failed to copy JSON: ' + error.message);
-      });
+        // Apply the loaded configuration
+        frames = config.frames;
+        globalOffsetX = config.globalOffsetX;
+        globalOffsetY = config.globalOffsetY;
+
+        // Update display
+        frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+        currentFrame = 0;
+        drawFrame();
+      } catch (error) {
+        alert('Error parsing JSON: ' + error.message);
+      }
     });
 
     // Toggle overlay
