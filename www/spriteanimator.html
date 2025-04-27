@@ -182,7 +182,7 @@
 <body>
   <div class="container">
     <div class="input-group">
-      <label>Sprite Sheet (v0.011):</label>
+      <label>Sprite Sheet (v0.012):</label>
       <input type="file" id="spriteInput" accept="image/png">
     </div>
     <div class="input-group">
@@ -387,46 +387,66 @@
   
     function updateAnimation() {
       if (!spriteImage) return;
-  
+
       const rows = parseInt(rowsInput.value) || 5;
       const cols = parseInt(colsInput.value) || 5;
       const fps = parseInt(speedInput.value) || 60;
-  
-      // Calculate frame dimensions (optionally round to integers)
-      const frameWidth = Math.round(spriteImage.width / cols); // Round for crisp rendering
-      const frameHeight = Math.round(spriteImage.height / rows); // Round for crisp rendering
-  
+
+      // Calculate frame dimensions (rounded for crisp rendering)
+      const frameWidth = Math.round(spriteImage.width / cols);
+      const frameHeight = Math.round(spriteImage.height / rows);
+
       // Calculate delayMs from FPS
       const delayMs = 1000 / fps;
-  
-      // Generate frame specifications with per-frame offsets
-      frames = [];
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          frames.push({
+
+      // Check if frames array is compatible (same number of frames)
+      const expectedFrameCount = rows * cols;
+      let newFrames = [];
+      if (frames.length === expectedFrameCount) {
+        // Preserve existing offsets if frame count matches
+        for (let i = 0; i < frames.length; i++) {
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+          newFrames.push({
             x: col * frameWidth,
             y: row * frameHeight,
             width: frameWidth,
             height: frameHeight,
-            offsetX: 0,
-            offsetY: 0
+            offsetX: frames[i].offsetX || 0, // Preserve existing offset
+            offsetY: frames[i].offsetY || 0  // Preserve existing offset
           });
         }
+      } else {
+        // Generate new frames if frame count has changed or frames are empty
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            newFrames.push({
+              x: col * frameWidth,
+              y: row * frameHeight,
+              width: frameWidth,
+              height: frameHeight,
+              offsetX: 0,
+              offsetY: 0
+            });
+          }
+        }
+        // Reset global offsets only if frame count changes
+        globalOffsetX = 0;
+        globalOffsetY = 0;
       }
-  
+
+      // Update frames array
+      frames = newFrames;
+
       // Update canvas size to match single frame
       canvas.width = frameWidth;
       canvas.height = frameHeight;
-  
-      // Reset global adjustments
-      globalOffsetX = 0;
-      globalOffsetY = 0;
-  
+
       // Display frame specs with delayMs and loop
       frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs, loop: true }, null, 2);
-  
-      // Reset animation
-      currentFrame = 0;
+
+      // Reset animation to current frame
+      currentFrame = Math.min(currentFrame, frames.length - 1);
       drawFrame();
     }
   
