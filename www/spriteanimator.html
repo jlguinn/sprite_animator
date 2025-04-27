@@ -271,22 +271,22 @@
     const ctx = canvas.getContext('2d');
     const frameSpecsOutput = document.getElementById('frameSpecs');
     const framePosition = document.getElementById('framePosition');
-
+  
     let spriteImage = null;
     let frames = [];
     let currentFrame = 0;
     let isPaused = false;
     let lastFrameTime = 0;
-    let globalOffsetX = 0; // Global x-axis adjustment
-    let globalOffsetY = 0; // Global y-axis adjustment
-    let overlayEnabled = false; // Track overlay state
-    const moveIncrement = 1; // Pixels to move per click
-
+    let globalOffsetX = 0;
+    let globalOffsetY = 0;
+    let overlayEnabled = false;
+    const moveIncrement = 1;
+  
     // Load sprite sheet
     spriteInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
+  
       const reader = new FileReader();
       reader.onload = (event) => {
         spriteImage = new Image();
@@ -312,17 +312,17 @@
       };
       reader.readAsDataURL(file);
     });
-
+  
     // Load JSON configuration from text input
     applyJsonBtn.addEventListener('click', () => {
       if (!spriteImage) return;
-
+  
       try {
         const config = JSON.parse(jsonInput.value);
         const rows = parseInt(rowsInput.value) || 5;
         const cols = parseInt(colsInput.value) || 5;
         const expectedFrameCount = rows * cols;
-
+  
         // Validate the loaded JSON
         if (!config.frames || !Array.isArray(config.frames)) {
           alert('Invalid JSON: "frames" must be an array.');
@@ -336,7 +336,12 @@
           alert('Invalid JSON: "globalOffsetX" and "globalOffsetY" must be numbers.');
           return;
         }
-
+        // Validate delayMs (new)
+        if (typeof config.delayMs !== 'number' || config.delayMs <= 0) {
+          alert('Invalid JSON: "delayMs" must be a positive number.');
+          return;
+        }
+  
         // Validate frame structure and dimensions
         const frameWidth = spriteImage.width / cols;
         const frameHeight = spriteImage.height / rows;
@@ -348,48 +353,52 @@
             alert(`Invalid JSON: Frame ${i} is missing required properties or has invalid types.`);
             return;
           }
-          // Check if dimensions match the current sprite sheet
           if (Math.abs(frame.width - frameWidth) > 0.1 || Math.abs(frame.height - frameHeight) > 0.1) {
             alert(`Invalid JSON: Frame ${i} dimensions (${frame.width}x${frame.height}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
             return;
           }
         }
-
+  
         // Apply the loaded configuration
         frames = config.frames;
         globalOffsetX = config.globalOffsetX;
         globalOffsetY = config.globalOffsetY;
-
+        speedInput.value = Math.round(1000 / config.delayMs); // Update FPS input to match delayMs
+  
         // Update display
-        frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+        frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: config.delayMs, loop: true }, null, 2);
         currentFrame = 0;
         drawFrame();
       } catch (error) {
         alert('Error parsing JSON: ' + error.message);
       }
     });
-
+  
     // Toggle overlay
     overlayToggle.addEventListener('change', () => {
       overlayEnabled = overlayToggle.checked;
-      console.log('Overlay toggled:', overlayEnabled); // Debug log
       drawFrame();
     });
-
+  
     // Update frames when inputs change
     rowsInput.addEventListener('input', updateAnimation);
     colsInput.addEventListener('input', updateAnimation);
-
+    speedInput.addEventListener('input', updateAnimation); // Update animation when FPS changes
+  
     function updateAnimation() {
       if (!spriteImage) return;
-
+  
       const rows = parseInt(rowsInput.value) || 5;
       const cols = parseInt(colsInput.value) || 5;
-
-      // Calculate frame dimensions
-      const frameWidth = spriteImage.width / cols;
-      const frameHeight = spriteImage.height / rows;
-
+      const fps = parseInt(speedInput.value) || 60;
+  
+      // Calculate frame dimensions (optionally round to integers)
+      const frameWidth = Math.round(spriteImage.width / cols); // Round for crisp rendering
+      const frameHeight = Math.round(spriteImage.height / rows); // Round for crisp rendering
+  
+      // Calculate delayMs from FPS
+      const delayMs = 1000 / fps;
+  
       // Generate frame specifications with per-frame offsets
       frames = [];
       for (let row = 0; row < rows; row++) {
@@ -399,192 +408,192 @@
             y: row * frameHeight,
             width: frameWidth,
             height: frameHeight,
-            offsetX: 0, // Per-frame x offset
-            offsetY: 0  // Per-frame y offset
+            offsetX: 0,
+            offsetY: 0
           });
         }
       }
-
+  
       // Update canvas size to match single frame
       canvas.width = frameWidth;
       canvas.height = frameHeight;
-
+  
       // Reset global adjustments
       globalOffsetX = 0;
       globalOffsetY = 0;
-
-      // Display frame specs
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
-
+  
+      // Display frame specs with delayMs and loop
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs, loop: true }, null, 2);
+  
       // Reset animation
       currentFrame = 0;
       drawFrame();
     }
-
+  
     // Draw current frame with per-frame and global position adjustments
     function drawFrame() {
       if (frames.length === 0) {
         framePosition.textContent = "-";
         return;
       }
-
+  
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+  
       // Draw current frame first with full opacity
       const frame = frames[currentFrame];
       const totalOffsetX = frame.offsetX + globalOffsetX;
       const totalOffsetY = frame.offsetY + globalOffsetY;
-      ctx.globalAlpha = 1.0; // Ensure full opacity
+      ctx.globalAlpha = 1.0;
       ctx.drawImage(
         spriteImage,
         frame.x, frame.y, frame.width, frame.height,
         totalOffsetX, totalOffsetY, canvas.width, canvas.height
       );
-
+  
       // Draw previous frame on top with 50% opacity if overlay is enabled
       if (overlayEnabled) {
         const prevFrameIndex = (currentFrame - 1 + frames.length) % frames.length;
         const prevFrame = frames[prevFrameIndex];
         const prevTotalOffsetX = prevFrame.offsetX + globalOffsetX;
         const prevTotalOffsetY = prevFrame.offsetY + globalOffsetY;
-
-        ctx.globalAlpha = 0.5; // Set 50% opacity for previous frame
+  
+        ctx.globalAlpha = 0.5;
         ctx.drawImage(
           spriteImage,
           prevFrame.x, prevFrame.y, prevFrame.width, prevFrame.height,
           prevTotalOffsetX, prevTotalOffsetY, canvas.width, canvas.height
         );
-        ctx.globalAlpha = 1.0; // Reset opacity
+        ctx.globalAlpha = 1.0;
       }
-
+  
       // Calculate row and column (1-based for display)
       const cols = parseInt(colsInput.value) || 5;
       const row = Math.floor(currentFrame / cols) + 1;
       const col = (currentFrame % cols) + 1;
       framePosition.textContent = `${row}:${col}`;
     }
-
+  
     // Animation loop
     function animate(timestamp) {
       if (isPaused || frames.length === 0) {
         requestAnimationFrame(animate);
         return;
       }
-
+  
       // Calculate time since last frame
       const fps = parseInt(speedInput.value) || 60;
       const frameInterval = 1000 / fps;
-
+  
       if (timestamp - lastFrameTime >= frameInterval) {
-        // Advance frame
         currentFrame = (currentFrame + 1) % frames.length;
         drawFrame();
         lastFrameTime = timestamp - (timestamp % frameInterval);
       }
-
+  
       requestAnimationFrame(animate);
     }
-
+  
     // Start animation loop
     requestAnimationFrame(animate);
-
+  
     // Speed input handler
     speedInput.addEventListener('input', () => {
       const fps = parseInt(speedInput.value);
-      if (fps < 1 || fps > 120) speedInput.value = 60; // Basic validation
-      lastFrameTime = performance.now(); // Reset timing
+      if (fps < 1 || fps > 120) speedInput.value = 60;
+      lastFrameTime = performance.now();
+      updateAnimation(); // Update JSON with new delayMs
     });
-
+  
     // Pause/Resume handler
     pauseResumeBtn.addEventListener('click', () => {
       isPaused = !isPaused;
       pauseResumeBtn.textContent = isPaused ? '>' : '||';
       if (!isPaused) {
-        lastFrameTime = performance.now(); // Reset timing on resume
+        lastFrameTime = performance.now();
       }
     });
-
+  
     // Previous frame handler
     prevFrameBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       currentFrame = (currentFrame - 1 + frames.length) % frames.length;
       drawFrame();
     });
-
+  
     // Next frame handler
     nextFrameBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       currentFrame = (currentFrame + 1) % frames.length;
       drawFrame();
     });
-
+  
     // Per-frame movement handlers
     moveUpBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       frames[currentFrame].offsetY -= moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     moveDownBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       frames[currentFrame].offsetY += moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     moveLeftBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       frames[currentFrame].offsetX -= moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     moveRightBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       frames[currentFrame].offsetX += moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     resetBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
       frames[currentFrame].offsetX = 0;
       frames[currentFrame].offsetY = 0;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     // Global movement handlers
     globalMoveUpBtn.addEventListener('click', () => {
       globalOffsetY -= moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     globalMoveDownBtn.addEventListener('click', () => {
       globalOffsetY += moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     globalMoveLeftBtn.addEventListener('click', () => {
       globalOffsetX -= moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     globalMoveRightBtn.addEventListener('click', () => {
       globalOffsetX += moveIncrement;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
-
+  
     globalResetBtn.addEventListener('click', () => {
       globalOffsetX = 0;
       globalOffsetY = 0;
-      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY }, null, 2);
+      frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: 1000 / (parseInt(speedInput.value) || 60), loop: true }, null, 2);
       drawFrame();
     });
   </script>
