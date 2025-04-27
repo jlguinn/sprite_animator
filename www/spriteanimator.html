@@ -177,12 +177,15 @@
       font-size: 14px;
       resize: vertical;
     }
+    #resetFrameBtn {
+      margin-left: 10px; /* Extra spacing to set it apart */
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="input-group">
-      <label>Sprite Sheet (v0.015):</label>
+      <label>Sprite Sheet (v0.016):</label>
       <input type="file" id="spriteInput" accept="image/png">
     </div>
     <div class="input-group">
@@ -200,10 +203,11 @@
       <input type="checkbox" id="overlayToggle">
     </div>
     <div class="input-group">
-      <button id="prevFrameBtn" disabled>|<</button>
+      <button id="prevFrameBtn" disabled>|&lt;</button>
       <button id="pauseResumeBtn" disabled>||</button>
-      <button id="nextFrameBtn" disabled>>|</button>
-    </div>
+      <button id="nextFrameBtn" disabled>&gt;|</button>
+      <button id="resetFrameBtn" disabled>&#8634;</button>
+    </div>    
     <div class="canvas-wrapper">
       <div class="canvas-container">
         <div class="frame-wrapper">
@@ -296,6 +300,7 @@
           pauseResumeBtn.disabled = false;
           prevFrameBtn.disabled = false;
           nextFrameBtn.disabled = false;
+          resetFrameBtn.disabled = false;
           moveUpBtn.disabled = false;
           moveDownBtn.disabled = false;
           moveLeftBtn.disabled = false;
@@ -566,6 +571,12 @@
       drawFrame();
     });
   
+    resetFrameBtn.addEventListener('click', () => {
+      if (frames.length === 0) return;
+      currentFrame = 0;
+      drawFrame();
+    });
+
     // Per-frame movement handlers
     moveUpBtn.addEventListener('click', () => {
       if (frames.length === 0) return;
