@@ -182,7 +182,7 @@
 <body>
   <div class="container">
     <div class="input-group">
-      <label>Sprite Sheet (v0.012):</label>
+      <label>Sprite Sheet (v0.013):</label>
       <input type="file" id="spriteInput" accept="image/png">
     </div>
     <div class="input-group">
@@ -192,8 +192,8 @@
       <input type="number" id="colsInput" value="5" min="1">
     </div>
     <div class="input-group">
-      <label>Speed (FPS):</label>
-      <input type="number" id="speedInput" value="8" min="1" max="120">
+      <label>Delay (ms):</label>
+      <input type="number" id="speedInput" value="125" min="8" max="1000">
     </div>
     <div class="input-group">
       <label>Overlay Previous Frame:</label>
@@ -341,8 +341,8 @@
         }
 
         // Validate frame structure and dimensions
-        const frameWidth = Math.round(spriteImage.width / cols); // Round expected dimensions
-        const frameHeight = Math.round(spriteImage.height / rows); // Round expected dimensions
+        const frameWidth = Math.round(spriteImage.width / cols);
+        const frameHeight = Math.round(spriteImage.height / rows);
         for (let i = 0; i < config.frames.length; i++) {
           const frame = config.frames[i];
           if (typeof frame.x !== 'number' || typeof frame.y !== 'number' ||
@@ -351,8 +351,8 @@
             alert(`Invalid JSON: Frame ${i} is missing required properties or has invalid types.`);
             return;
           }
-          const jsonFrameWidth = Math.round(frame.width); // Round JSON dimensions
-          const jsonFrameHeight = Math.round(frame.height); // Round JSON dimensions
+          const jsonFrameWidth = Math.round(frame.width);
+          const jsonFrameHeight = Math.round(frame.height);
           if (jsonFrameWidth !== frameWidth || jsonFrameHeight !== frameHeight) {
             alert(`Invalid JSON: Frame ${i} dimensions (${jsonFrameWidth}x${jsonFrameHeight}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
             return;
@@ -363,7 +363,7 @@
         frames = config.frames;
         globalOffsetX = config.globalOffsetX;
         globalOffsetY = config.globalOffsetY;
-        speedInput.value = Math.round(1000 / config.delayMs); // Update FPS input to match delayMs
+        speedInput.value = config.delayMs; // Set delayMs directly
 
         // Update display
         frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: config.delayMs, loop: true }, null, 2);
@@ -390,14 +390,11 @@
 
       const rows = parseInt(rowsInput.value) || 5;
       const cols = parseInt(colsInput.value) || 5;
-      const fps = parseInt(speedInput.value) || 60;
+      const delayMs = parseInt(speedInput.value) || 125;
 
       // Calculate frame dimensions (rounded for crisp rendering)
       const frameWidth = Math.round(spriteImage.width / cols);
       const frameHeight = Math.round(spriteImage.height / rows);
-
-      // Calculate delayMs from FPS
-      const delayMs = 1000 / fps;
 
       // Check if frames array is compatible (same number of frames)
       const expectedFrameCount = rows * cols;
@@ -412,8 +409,8 @@
             y: row * frameHeight,
             width: frameWidth,
             height: frameHeight,
-            offsetX: frames[i].offsetX || 0, // Preserve existing offset
-            offsetY: frames[i].offsetY || 0  // Preserve existing offset
+            offsetX: frames[i].offsetX || 0,
+            offsetY: frames[i].offsetY || 0
           });
         }
       } else {
@@ -500,17 +497,15 @@
         requestAnimationFrame(animate);
         return;
       }
-  
+
       // Calculate time since last frame
-      const fps = parseInt(speedInput.value) || 60;
-      const frameInterval = 1000 / fps;
-  
-      if (timestamp - lastFrameTime >= frameInterval) {
+      const delayMs = parseInt(speedInput.value) || 125;
+      if (timestamp - lastFrameTime >= delayMs) {
         currentFrame = (currentFrame + 1) % frames.length;
         drawFrame();
-        lastFrameTime = timestamp - (timestamp % frameInterval);
+        lastFrameTime = timestamp - (timestamp % delayMs);
       }
-  
+
       requestAnimationFrame(animate);
     }
   
@@ -519,8 +514,11 @@
   
     // Speed input handler
     speedInput.addEventListener('input', () => {
-      const fps = parseInt(speedInput.value);
-      if (fps < 1 || fps > 120) speedInput.value = 60;
+      let delayMs = parseInt(speedInput.value);
+      if (isNaN(delayMs) || delayMs < 8 || delayMs > 1000) {
+        delayMs = 125; // Default to 125 ms
+        speedInput.value = delayMs;
+      }
       lastFrameTime = performance.now();
       updateAnimation(); // Update JSON with new delayMs
     });
