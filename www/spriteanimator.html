@@ -182,7 +182,7 @@
 <body>
   <div class="container">
     <div class="input-group">
-      <label>Sprite Sheet (PNG):</label>
+      <label>Sprite Sheet (v0.011):</label>
       <input type="file" id="spriteInput" accept="image/png">
     </div>
     <div class="input-group">
@@ -193,7 +193,7 @@
     </div>
     <div class="input-group">
       <label>Speed (FPS):</label>
-      <input type="number" id="speedInput" value="60" min="1" max="120">
+      <input type="number" id="speedInput" value="8" min="1" max="120">
     </div>
     <div class="input-group">
       <label>Overlay Previous Frame:</label>
@@ -313,16 +313,15 @@
       reader.readAsDataURL(file);
     });
   
-    // Load JSON configuration from text input
     applyJsonBtn.addEventListener('click', () => {
       if (!spriteImage) return;
-  
+
       try {
         const config = JSON.parse(jsonInput.value);
         const rows = parseInt(rowsInput.value) || 5;
         const cols = parseInt(colsInput.value) || 5;
         const expectedFrameCount = rows * cols;
-  
+
         // Validate the loaded JSON
         if (!config.frames || !Array.isArray(config.frames)) {
           alert('Invalid JSON: "frames" must be an array.');
@@ -336,15 +335,14 @@
           alert('Invalid JSON: "globalOffsetX" and "globalOffsetY" must be numbers.');
           return;
         }
-        // Validate delayMs (new)
         if (typeof config.delayMs !== 'number' || config.delayMs <= 0) {
           alert('Invalid JSON: "delayMs" must be a positive number.');
           return;
         }
-  
+
         // Validate frame structure and dimensions
-        const frameWidth = spriteImage.width / cols;
-        const frameHeight = spriteImage.height / rows;
+        const frameWidth = Math.round(spriteImage.width / cols); // Round expected dimensions
+        const frameHeight = Math.round(spriteImage.height / rows); // Round expected dimensions
         for (let i = 0; i < config.frames.length; i++) {
           const frame = config.frames[i];
           if (typeof frame.x !== 'number' || typeof frame.y !== 'number' ||
@@ -353,18 +351,20 @@
             alert(`Invalid JSON: Frame ${i} is missing required properties or has invalid types.`);
             return;
           }
-          if (Math.abs(frame.width - frameWidth) > 0.1 || Math.abs(frame.height - frameHeight) > 0.1) {
-            alert(`Invalid JSON: Frame ${i} dimensions (${frame.width}x${frame.height}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
+          const jsonFrameWidth = Math.round(frame.width); // Round JSON dimensions
+          const jsonFrameHeight = Math.round(frame.height); // Round JSON dimensions
+          if (jsonFrameWidth !== frameWidth || jsonFrameHeight !== frameHeight) {
+            alert(`Invalid JSON: Frame ${i} dimensions (${jsonFrameWidth}x${jsonFrameHeight}) do not match expected dimensions (${frameWidth}x${frameHeight}).`);
             return;
           }
         }
-  
+
         // Apply the loaded configuration
         frames = config.frames;
         globalOffsetX = config.globalOffsetX;
         globalOffsetY = config.globalOffsetY;
         speedInput.value = Math.round(1000 / config.delayMs); // Update FPS input to match delayMs
-  
+
         // Update display
         frameSpecsOutput.textContent = JSON.stringify({ frames, globalOffsetX, globalOffsetY, delayMs: config.delayMs, loop: true }, null, 2);
         currentFrame = 0;
