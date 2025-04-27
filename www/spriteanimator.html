@@ -182,7 +182,7 @@
 <body>
   <div class="container">
     <div class="input-group">
-      <label>Sprite Sheet (v0.013):</label>
+      <label>Sprite Sheet (v0.015):</label>
       <input type="file" id="spriteInput" accept="image/png">
     </div>
     <div class="input-group">
@@ -193,7 +193,7 @@
     </div>
     <div class="input-group">
       <label>Delay (ms):</label>
-      <input type="number" id="speedInput" value="125" min="8" max="1000">
+      <input type="text" id="speedInput" value="125">
     </div>
     <div class="input-group">
       <label>Overlay Previous Frame:</label>
@@ -383,7 +383,18 @@
     // Update frames when inputs change
     rowsInput.addEventListener('input', updateAnimation);
     colsInput.addEventListener('input', updateAnimation);
-    speedInput.addEventListener('input', updateAnimation); // Update animation when FPS changes
+    speedInput.addEventListener('change', updateDelay);
+    speedInput.addEventListener('blur', updateDelay);
+
+    function updateDelay() {
+      let delayMs = parseInt(speedInput.value);
+      if (isNaN(delayMs) || delayMs < 8 || delayMs > 1000) {
+        delayMs = 125; // Default to 125 ms
+        speedInput.value = delayMs;
+      }
+      lastFrameTime = performance.now();
+      updateAnimation(); // Update JSON with new delayMs
+    }
   
     function updateAnimation() {
       if (!spriteImage) return;
@@ -513,15 +524,24 @@
     requestAnimationFrame(animate);
   
     // Speed input handler
-    speedInput.addEventListener('input', () => {
-      let delayMs = parseInt(speedInput.value);
-      if (isNaN(delayMs) || delayMs < 8 || delayMs > 1000) {
-        delayMs = 125; // Default to 125 ms
-        speedInput.value = delayMs;
+    speedInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        validateAndApplyDelay();
+      }
+    });
+    speedInput.addEventListener('blur', validateAndApplyDelay);
+
+    function validateAndApplyDelay() {
+      const input = speedInput.value.trim();
+      const delayMs = parseInt(input);
+      if (isNaN(delayMs) || delayMs < 8 || delayMs > 1000 || input.match(/[^0-9]/)) {
+        speedInput.value = '125'; // Default to 125 ms
+      } else {
+        speedInput.value = delayMs.toString(); // Ensure clean integer display
       }
       lastFrameTime = performance.now();
       updateAnimation(); // Update JSON with new delayMs
-    });
+    }
   
     // Pause/Resume handler
     pauseResumeBtn.addEventListener('click', () => {
